@@ -7,7 +7,7 @@ import {
   howItWorksData,
   statsData,
   testimonialsData,
-} from "@/data/landing";
+} from "@/data/landing.js";
 import HeroSection from "@/components/hero";
 import Link from "next/link";
 

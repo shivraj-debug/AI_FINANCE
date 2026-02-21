@@ -1,51 +1,58 @@
 "use server";
 
 import aj from "@/lib/arcjet";
-import { db } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { request } from "@arcjet/next";
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { revalidatePath } from "next/cache";
 
 const serializeTransaction = (obj) => {
   const serialized = { ...obj };
+
   if (obj.balance) {
-    serialized.balance = obj.balance.toNumber();
+    serialized.balance = Number(obj.balance);
   }
+
   if (obj.amount) {
-    serialized.amount = obj.amount.toNumber();
+    serialized.amount = Number(obj.amount);
   }
+
   return serialized;
 };
 
-export async function getUserAccounts() {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+// 🔥 Helper to get logged-in user
+async function getCurrentUser() {
+  const session = await getServerSession(authOptions);
 
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
-
-  if (!user) {
-    throw new Error("User not found");
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
   }
 
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+  });
+
+  if (!user) throw new Error("User not found");
+
+  return { user, session };
+}
+
+export async function getUserAccounts() {
+  const { user } = await getCurrentUser();
+
   try {
-    const accounts = await db.account.findMany({
+    const accounts = await prisma.financeAccount.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
       include: {
         _count: {
-          select: {
-            transactions: true,
-          },
+          select: { transactions: true },
         },
       },
     });
 
-    // Serialize accounts before sending to client
-    const serializedAccounts = accounts.map(serializeTransaction);
-
-    return serializedAccounts;
+    return accounts.map(serializeTransaction);
   } catch (error) {
     console.error(error.message);
   }
@@ -53,101 +60,65 @@ export async function getUserAccounts() {
 
 export async function createAccount(data) {
   try {
-    const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
+    const { user, session } = await getCurrentUser();
 
-    // Get request data for ArcJet
     const req = await request();
 
-    // Check rate limit
+    // 🔥 Use session.user.id instead of clerk userId
     const decision = await aj.protect(req, {
-      userId,
-      requested: 1, // Specify how many tokens to consume
+      userId: session.user.id,
+      requested: 1,
     });
 
     if (decision.isDenied()) {
       if (decision.reason.isRateLimit()) {
-        const { remaining, reset } = decision.reason;
-        console.error({
-          code: "RATE_LIMIT_EXCEEDED",
-          details: {
-            remaining,
-            resetInSeconds: reset,
-          },
-        });
-
         throw new Error("Too many requests. Please try again later.");
       }
 
       throw new Error("Request blocked");
     }
 
-    const user = await db.user.findUnique({
-      where: { clerkUserId: userId },
-    });
-
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    // Convert balance to float before saving
     const balanceFloat = parseFloat(data.balance);
+
     if (isNaN(balanceFloat)) {
       throw new Error("Invalid balance amount");
     }
 
-    // Check if this is the user's first account
-    const existingAccounts = await db.account.findMany({
+    const existingAccounts = await prisma.financeAccount.findMany({
       where: { userId: user.id },
     });
 
-    // If it's the first account, make it default regardless of user input
-    // If not, use the user's preference
     const shouldBeDefault =
       existingAccounts.length === 0 ? true : data.isDefault;
 
-    // If this account should be default, unset other default accounts
     if (shouldBeDefault) {
-      await db.account.updateMany({
+      await prisma.financeAccount.updateMany({
         where: { userId: user.id, isDefault: true },
         data: { isDefault: false },
       });
     }
 
-    // Create new account
-    const account = await db.account.create({
+    const account = await prisma.financeAccount.create({
       data: {
         ...data,
         balance: balanceFloat,
         userId: user.id,
-        isDefault: shouldBeDefault, // Override the isDefault based on our logic
+        isDefault: shouldBeDefault,
       },
     });
 
-    // Serialize the account before returning
-    const serializedAccount = serializeTransaction(account);
-
     revalidatePath("/dashboard");
-    return { success: true, data: serializedAccount };
+
+    return { success: true, data: serializeTransaction(account) };
   } catch (error) {
     throw new Error(error.message);
   }
 }
 
 export async function getDashboardData() {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+  const { user } = await getCurrentUser();
 
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
-
-  if (!user) {
-    throw new Error("User not found");
-  }
-
-  // Get all user transactions
-  const transactions = await db.transaction.findMany({
+  const transactions = await prisma.transaction.findMany({
     where: { userId: user.id },
     orderBy: { date: "desc" },
   });

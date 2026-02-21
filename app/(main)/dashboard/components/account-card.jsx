@@ -56,11 +56,25 @@ export function AccountCard({ account }) {
             {name}
           </CardTitle>
           
-          <Switch
-            checked={isDefault}
-            onCheckedChange={handleDefaultChange}
-            disabled={updateDefaultLoading}
-          />
+         <Switch 
+  className="
+    /* Track Styling */
+    data-[state=checked]:bg-black 
+    data-[state=unchecked]:bg-white 
+    border-2 border-black 
+    shadow-none
+    
+    /* Thumb (Circle) Styling */
+    [&>span]:bg-white 
+    data-[state=checked]:[&>span]:bg-white
+    data-[state=unchecked]:[&>span]:bg-black
+    [&>span]:border-black
+    [&>span]:border
+  "
+  checked={isDefault}
+  onCheckedChange={handleDefaultChange}
+  disabled={updateDefaultLoading}
+/>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">

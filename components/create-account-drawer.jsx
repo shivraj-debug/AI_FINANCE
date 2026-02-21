@@ -30,6 +30,7 @@ import { accountSchema } from "@/app/lib/schema";
 
 export function CreateAccountDrawer({ children }) {
   const [open, setOpen] = useState(false);
+  
   const {
     register,
     handleSubmit,
@@ -54,6 +55,9 @@ export function CreateAccountDrawer({ children }) {
     data: newAccount,
   } = useFetch(createAccount);
 
+  // Watch the isDefault field from the form state
+  const isDefaultValue = watch("isDefault");
+
   const onSubmit = async (data) => {
     await createAccountFn(data);
   };
@@ -73,7 +77,7 @@ export function CreateAccountDrawer({ children }) {
   }, [error]);
 
   return (
-    <Drawer open={open} onOpenChange={setOpen} className="bg-cyan-200">
+    <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>{children}</DrawerTrigger>
       <DrawerContent className="bg-white">
         <DrawerHeader>
@@ -81,11 +85,9 @@ export function CreateAccountDrawer({ children }) {
         </DrawerHeader>
         <div className="px-4 pb-4">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Account Name */}
             <div className="space-y-2">
-              <label
-                htmlFor="name"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
+              <label htmlFor="name" className="text-sm font-medium">
                 Account Name
               </label>
               <Input
@@ -98,11 +100,9 @@ export function CreateAccountDrawer({ children }) {
               )}
             </div>
 
+            {/* Account Type */}
             <div className="space-y-2">
-              <label
-                htmlFor="type"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
+              <label htmlFor="type" className="text-sm font-medium">
                 Account Type
               </label>
               <Select
@@ -122,11 +122,9 @@ export function CreateAccountDrawer({ children }) {
               )}
             </div>
 
+            {/* Initial Balance */}
             <div className="space-y-2">
-              <label
-                htmlFor="balance"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
+              <label htmlFor="balance" className="text-sm font-medium">
                 Initial Balance
               </label>
               <Input
@@ -141,6 +139,7 @@ export function CreateAccountDrawer({ children }) {
               )}
             </div>
 
+            {/* Set as Default Switch */}
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
                 <label
@@ -155,11 +154,28 @@ export function CreateAccountDrawer({ children }) {
               </div>
               <Switch
                 id="isDefault"
-                checked={watch("isDefault")}
+                checked={isDefaultValue}
                 onCheckedChange={(checked) => setValue("isDefault", checked)}
+                disabled={createAccountLoading}
+                className="
+                  /* Track Styling */
+                  data-[state=checked]:!bg-black 
+                  data-[state=unchecked]:!bg-white 
+                  !border-2 !border-black 
+                  !shadow-none
+                  
+                  /* Thumb Styling */
+                  [&>span]:!bg-black
+                  data-[state=checked]:[&>span]:!bg-white
+                  data-[state=unchecked]:[&>span]:!bg-black
+                  
+                  /* Disabled state */
+                  disabled:!opacity-70
+                "
               />
             </div>
 
+            {/* Form Actions */}
             <div className="flex gap-4 pt-4">
               <DrawerClose asChild>
                 <Button type="button" variant="outline" className="flex-1">
