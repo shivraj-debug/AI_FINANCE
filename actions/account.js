@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth"
 import { revalidatePath } from "next/cache";
 
 const serializeDecimal = (obj) => {
@@ -19,7 +19,6 @@ const serializeDecimal = (obj) => {
   return serialized;
 };
 
-// 🔥 Helper to get logged in user
 async function getCurrentUser() {
   const session = await getServerSession(authOptions);
 

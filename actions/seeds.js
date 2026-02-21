@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { subDays } from "date-fns";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth"
 
 // Categories
 const CATEGORIES = {
@@ -52,7 +52,7 @@ export async function seedTransactions() {
 
     const userId = session.user.id;
 
-    // 🔥 Get user's default account
+   
     const account = await prisma.financeAccount.findFirst({
       where: {
         userId,

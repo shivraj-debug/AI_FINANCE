@@ -4,7 +4,7 @@ import aj from "@/lib/arcjet";
 import { prisma } from "@/lib/prisma";
 import { request } from "@arcjet/next";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth"
 import { revalidatePath } from "next/cache";
 
 const serializeTransaction = (obj) => {
@@ -21,7 +21,7 @@ const serializeTransaction = (obj) => {
   return serialized;
 };
 
-// 🔥 Helper to get logged-in user
+
 async function getCurrentUser() {
   const session = await getServerSession(authOptions);
 
